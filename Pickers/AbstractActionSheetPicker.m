@@ -50,13 +50,17 @@ CG_INLINE BOOL isIPhone4()
 
 
 
-@interface AbstractActionSheetPicker ()
+@interface AbstractActionSheetPicker (){
+    Class _targetClass; //避免因为unsafe的target释放之后，出现了野指针。
+}
 
 @property(nonatomic, strong) UIBarButtonItem *barButtonItem;
 @property(nonatomic, strong) UIBarButtonItem *doneBarButtonItem;
 @property(nonatomic, strong) UIBarButtonItem *cancelBarButtonItem;
 @property(nonatomic, strong) UIView *containerView;
+//Notice:非ARC模式下使用unsafe_unretained可能会出现野指针的问题，使用需注意
 @property(nonatomic, unsafe_unretained) id target;
+
 @property(nonatomic, assign) SEL successAction;
 @property(nonatomic, assign) SEL cancelAction;
 @property(nonatomic, strong) SWActionSheet *actionSheet;
@@ -130,6 +134,7 @@ CG_INLINE BOOL isIPhone4()
     if ( self )
     {
         self.target = target;
+		_targetClass = object_getClass(_target);
         self.successAction = successAction;
         self.cancelAction = cancelActionOrNil;
 
@@ -706,6 +711,18 @@ CG_INLINE BOOL isIPhone4()
     };
 }
 
-
+#pragma mark - getters
+- (id)target{
+    if (_target) { //做个判断是否已经释放了target
+        Class targetClass = object_getClass(_target);
+        if (targetClass == _targetClass) {
+            return _target;
+        }else {
+            NSLog(@"ActionSheet target可能被释放了！");
+        }
+    }
+    
+    return nil;
+}
 @end
 
